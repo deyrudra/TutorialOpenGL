@@ -32,7 +32,7 @@ int main() {
 	while (!glfwWindowShouldClose(window)) {
 		// This function actively polls the events happening to the window; this includes window movement, mouse movements, and sort of
 		// input, etc. Without this, the window will be in state of "not responding".
-		glfwPollEvents();
+		glfwPollEvents(); 
 	}
 
 
