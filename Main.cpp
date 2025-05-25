@@ -40,15 +40,24 @@ int main() {
 	//Telling GLFW that we are going to use the CORE profile, which allows us to use the modern features of OPENGL.
 	glfwWindowHint(GLFW_OPENGL_PROFILE, GLFW_OPENGL_CORE_PROFILE);
 
-	// Vertices for Triangle
+	// Vertices for Triangle + more coordinates for more triangles sharing same vertices
 	GLfloat vertices[] =
 	{
 		-0.5f, -0.5f * float(sqrt(3)) / 3, 0.0f, // Lower left corner
 		0.5f, -0.5f * float(sqrt(3)) / 3, 0.0f, // Lower right corner
-		0.0f, 0.5f * float(sqrt(3)) * 2 / 3, 0.0f // Upper corner
+		0.0f, 0.5f * float(sqrt(3)) * 2 / 3, 0.0f, // Upper corner
+		-0.5f / 2, 0.5f * float(sqrt(3)) / 6, 0.0f, // Inner left
+		0.5f / 2, 0.5f * float(sqrt(3)) / 6, 0.0f, // Inner right
+		0.0f, -0.5f * float(sqrt(3)) / 3, 0.0f // Inner down
 	};
 
-
+	// Creating indices[] array to identify the shapes
+	GLuint indices[] =
+	{
+		0, 3, 5, // Lower Left Triangle
+		3, 2, 4, // Lower Right Triangle
+		5, 4, 1 // Upper Triangle
+	};
 
 
 	// This is the window object for GLFW, parameters are: width, height, name of window, fullscreen boolean, last one not important
@@ -102,7 +111,16 @@ int main() {
 	// The config 1 could be, STREAM: vertices are modified once, but used few times; STATIC: vertices are modified once, and used many times
 	// ; DYNAMIC: vertices are modified many times, and used many times.
 	// The config 2 could be DRAW; READ; COPY.
-	GLuint VAO, VBO;
+	// What is a VAO?
+	// VAO stands for Vertex Array Object, it stores the configuration of vertex attributes such as which VBOs are bound, how the vertex data
+	// is liad out (glVertexAttribPointer) and which vertex attributes are enabled (glEnableVertexAttribArray)
+	// What is EBO?
+	// EBO stands for Element Buffer Object, it is a buffer that stores indices telling the GPU how to reuse vertices efficiently when drawing
+	// geometry (usually triangles). Instead of repeating the same vertex data, you can: Store unique vertices once in a VBO. Use the EBO to
+	// specify which vertices make up each triangle by index. This reduces memory usage and improves performance; also saves coding time.
+	// What does Binding something mean?
+	// Binding means to make an object, the selected object.
+	GLuint VAO, VBO, EBO;
 
 	// Generate a Vertex Array Object (VAO)
 	glGenVertexArrays(1, &VAO);
@@ -110,14 +128,24 @@ int main() {
 	// Generate a Vertex Buffer Object (VBO)
 	glGenBuffers(1, &VBO);
 
+	// Generating EBO w/ 1 object
+	glGenBuffers(1, &EBO);
+
 	// Bind the VAO (stores all vertex attribute configs)
 	glBindVertexArray(VAO);
 
-	// Bind the VBO to GL_ARRAY_BUFFER
+	// Bind the VBO specifiying that it is a GL_ARRAY_BUFFER
 	glBindBuffer(GL_ARRAY_BUFFER, VBO);
 
 	// Upload vertex data to GPU
 	glBufferData(GL_ARRAY_BUFFER, sizeof(vertices), vertices, GL_STATIC_DRAW);
+
+	// Bind the EBO, specifying that it is a GL_ELEMENT_ARRAY_BUFFER
+	glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, EBO);
+
+	// Upload vertices within the indices to the GPU
+	glBufferData(GL_ELEMENT_ARRAY_BUFFER, sizeof(indices), indices, GL_STATIC_DRAW);
+
 
 	// Define vertex attribute layout:
 	//    - location 0 (matches layout in vertex shader)
@@ -137,12 +165,8 @@ int main() {
 	// Unbind the VAO (good practice)
 	glBindVertexArray(0);
 
-
-
-
-
-
-
+	// Unbind the EBO (good practice): meaning we telling OpenGL we don't want the VAO to use the EBO
+	glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, 0);
 
 
 
@@ -174,7 +198,10 @@ int main() {
 		glClear(GL_COLOR_BUFFER_BIT);
 		glUseProgram(shaderProgram);
 		glBindVertexArray(VAO);
-		glDrawArrays(GL_TRIANGLES, 0, 3); // 0 represents the starting index of the vertices, and 3 is the # of vertices
+		//glDrawArrays(GL_TRIANGLES, 0, 3); // 0 represents the starting index of the vertices, and 3 is the # of vertices
+		// Instead of glDrawArrays, we want to instead now use glDrawElements specifying which primative we want to use.
+		glDrawElements(GL_TRIANGLES, 9, GL_UNSIGNED_INT, 0); // 9 represents the indices we want to draw, and 0 is the index
+
 
 		// Need to swap buffers to update the image.
 		glfwSwapBuffers(window);
@@ -189,6 +216,7 @@ int main() {
 	// Deleting all objects we've made
 	glDeleteVertexArrays(1, &VAO);
 	glDeleteBuffers(1, &VBO);
+	glDeleteBuffers(1, &EBO);
 	glDeleteProgram(shaderProgram);
 
 
